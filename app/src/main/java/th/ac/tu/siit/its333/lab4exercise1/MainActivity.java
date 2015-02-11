@@ -17,6 +17,8 @@ public class MainActivity extends ActionBarActivity {
 
     CourseDBHelper helper;
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -29,6 +31,28 @@ public class MainActivity extends ActionBarActivity {
         super.onResume();
 
         // This method is called when this activity is put foreground.
+        helper = new CourseDBHelper(this);
+        SQLiteDatabase db = helper.getWritableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT SUM(credit) AS sum_credit,SUM(credit*value) AS sum_gp FROM course;",
+                null);
+        c.moveToFirst();
+        int total_credit = c.getInt(c.getColumnIndex("sum_credit"));
+        double tgp = c.getDouble(c.getColumnIndex("sum_gp"));
+        double gpa = tgp / total_credit;
+
+        String total_credit_str = Integer.toString(total_credit);
+        String gp_str = String.format("%.2f",tgp);
+        String gpa_str = String.format("%.2f",gpa);
+
+        TextView tvGPA = (TextView)findViewById(R.id.tvGPA);
+        TextView tvGP = (TextView)findViewById(R.id.tvGP);
+        TextView tvCR = (TextView)findViewById(R.id.tvCR);
+        tvGP.setText(gp_str);
+        tvCR.setText(total_credit_str);
+        tvGPA.setText(gpa_str);
+
+        db.close();
 
     }
 
@@ -48,6 +72,10 @@ public class MainActivity extends ActionBarActivity {
                 break;
 
             case R.id.btReset:
+                helper = new CourseDBHelper(this);
+                SQLiteDatabase db = helper.getWritableDatabase();
+                db.delete("course","",null);
+                onResume();
 
                 break;
         }
@@ -60,6 +88,26 @@ public class MainActivity extends ActionBarActivity {
                 String code = data.getStringExtra("code");
                 int credit = data.getIntExtra("credit", 0);
                 String grade = data.getStringExtra("grade");
+
+                helper = new CourseDBHelper(this);
+
+                SQLiteDatabase db = helper.getWritableDatabase();
+                ContentValues r = new ContentValues();
+                r.put("code", code);
+                r.put("credit", credit);
+                r.put("grade",grade);
+                double g_db = gradeToValue(grade);
+                r.put("value",g_db);
+                long new_id = db.insert("course", null, r);
+
+                if(new_id==-1){
+                    Log.d("Insert ","Failed");
+                }else{
+                    Log.d("Insert ","Success");
+                }
+
+                db.close();
+
 
             }
         }
@@ -85,6 +133,12 @@ public class MainActivity extends ActionBarActivity {
         else
             return 0.0;
     }
+
+    public void sum_gpa(){
+
+    }
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
